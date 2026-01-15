@@ -5,13 +5,14 @@ import json
 import logging
 import random
 import uuid
-from datetime import datetime, timedelta, time
+from datetime import datetime, time, timedelta
 from decimal import Decimal
-import psycopg2
-from psycopg2 import sql
+
 import numpy as np
 import pandas as pd
+import psycopg2
 from faker import Faker
+from psycopg2 import sql
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -182,11 +183,13 @@ class CompleteEcomDataMigrator:
             # Check if role exists
             existing = session.execute(
                 text("SELECT id FROM roles WHERE name = :name"),
-                {"name": role_data["name"]}
+                {"name": role_data["name"]},
             ).fetchone()
             if existing:
                 role_id = existing.id
-                logger.info(f"Using existing role '{role_data['name']}' with id {role_id}")
+                logger.info(
+                    f"Using existing role '{role_data['name']}' with id {role_id}"
+                )
             else:
                 role_id = str(uuid.uuid4())
                 session.execute(
@@ -209,8 +212,7 @@ class CompleteEcomDataMigrator:
         # Create admin user if not exists
         admin_email = "admin@ecommerce.com"
         existing_admin = session.execute(
-            text("SELECT id FROM users WHERE email = :email"),
-            {"email": admin_email}
+            text("SELECT id FROM users WHERE email = :email"), {"email": admin_email}
         ).fetchone()
         if existing_admin:
             admin_id = existing_admin.id
@@ -251,7 +253,7 @@ class CompleteEcomDataMigrator:
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = :user_id AND r.name = 'admin'
             """),
-            {"user_id": admin_id}
+            {"user_id": admin_id},
         ).fetchone()
         if not existing_assignment:
             session.execute(
@@ -264,9 +266,11 @@ class CompleteEcomDataMigrator:
                     "role_id": role_ids["admin"],
                 },
             )
-            logger.info(f"Assigned admin role to admin user")
+            logger.info("Assigned admin role to admin user")
 
-        logger.info("✅ Created/verified roles and admin user (admin@ecommerce.com / password123)")
+        logger.info(
+            "✅ Created/verified roles and admin user (admin@ecommerce.com / password123)"
+        )
 
     def _extract_categories_and_brands_from_csv(self, session):
         """Extract unique categories and brands from product CSV"""
@@ -309,7 +313,7 @@ class CompleteEcomDataMigrator:
             # Check if category exists
             existing = session.execute(
                 text("SELECT id FROM product_categories WHERE name = :name"),
-                {"name": name}
+                {"name": name},
             ).fetchone()
             if existing:
                 category_id = existing.id
@@ -362,7 +366,9 @@ class CompleteEcomDataMigrator:
                 try:
                     with self.engine.begin() as conn:
                         # Parse the data from your CSV format
-                        product_id = row["id"] if pd.notna(row["id"]) else str(uuid.uuid4())
+                        product_id = (
+                            row["id"] if pd.notna(row["id"]) else str(uuid.uuid4())
+                        )
 
                         # Clean and validate data before insertion
                         name = (
@@ -414,7 +420,9 @@ class CompleteEcomDataMigrator:
 
                         # Validate price
                         try:
-                            price = float(row["price"]) if pd.notna(row["price"]) else 0.0
+                            price = (
+                                float(row["price"]) if pd.notna(row["price"]) else 0.0
+                            )
                             if price < 0:
                                 price = 0.0
                         except (ValueError, TypeError):
@@ -435,7 +443,9 @@ class CompleteEcomDataMigrator:
                             try:
                                 image_str = str(row["images"])
                                 # Handle different image formats
-                                if image_str.startswith("{") and image_str.endswith("}"):
+                                if image_str.startswith("{") and image_str.endswith(
+                                    "}"
+                                ):
                                     # Remove braces and split
                                     image_str = image_str.strip("{}")
                                     images = [
@@ -443,7 +453,9 @@ class CompleteEcomDataMigrator:
                                         for img in image_str.split(",")
                                         if img.strip()
                                     ]
-                                elif image_str.startswith("[") and image_str.endswith("]"):
+                                elif image_str.startswith("[") and image_str.endswith(
+                                    "]"
+                                ):
                                     # JSON array format
                                     images = json.loads(image_str)
                                 else:
@@ -486,9 +498,9 @@ class CompleteEcomDataMigrator:
                                     ]
 
                                 # Clean and limit tags
-                                tags = [tag[:50] for tag in tags if tag and len(tag) > 1][
-                                    :20
-                                ]
+                                tags = [
+                                    tag[:50] for tag in tags if tag and len(tag) > 1
+                                ][:20]
                             except Exception:
                                 tags = []
 
@@ -626,7 +638,9 @@ class CompleteEcomDataMigrator:
                 f"✅ Imported {products_imported} products from CSV ({products_failed} failed)"
             )
         except Exception as e:
-            logger.warning(f"Could not import from CSV: {e}. Generating sample products.")
+            logger.warning(
+                f"Could not import from CSV: {e}. Generating sample products."
+            )
             self._generate_sample_products()
 
     def _generate_sample_products(self):
@@ -634,15 +648,28 @@ class CompleteEcomDataMigrator:
         logger.info("Generating 100 sample products...")
         category_list = list(self.categories.values())
         sample_names = [
-            "Wireless Bluetooth Speaker", "Smart LED Light Bulb", "Portable Power Bank",
-            "Educational Science Kit", "Building Block Set", "Remote Control Car",
-            "Fitness Tracker", "Yoga Mat", "Running Shoes", "Wireless Earbuds",
-            "Coffee Maker", "Blender", "Toaster Oven", "Garden Tool Set", "Art Supply Kit"
+            "Wireless Bluetooth Speaker",
+            "Smart LED Light Bulb",
+            "Portable Power Bank",
+            "Educational Science Kit",
+            "Building Block Set",
+            "Remote Control Car",
+            "Fitness Tracker",
+            "Yoga Mat",
+            "Running Shoes",
+            "Wireless Earbuds",
+            "Coffee Maker",
+            "Blender",
+            "Toaster Oven",
+            "Garden Tool Set",
+            "Art Supply Kit",
         ]
-        sample_brands = list(self.brands.keys()) if self.brands else ["Generic", "Sample"]
+        sample_brands = (
+            list(self.brands.keys()) if self.brands else ["Generic", "Sample"]
+        )
         for i in range(100):
             product_id = str(uuid.uuid4())
-            name = f"{random.choice(sample_names)} {i+1}"
+            name = f"{random.choice(sample_names)} {i + 1}"
             code = f"SAMPLE_{i:04d}"
             category_id = random.choice(category_list)
             brand = random.choice(sample_brands)
@@ -675,13 +702,15 @@ class CompleteEcomDataMigrator:
                         "tags": json.dumps(["sample", "test"]),
                     },
                 )
-            self.products.append({
-                "id": product_id,
-                "name": name,
-                "category_id": category_id,
-                "price": price,
-                "brand": brand,
-            })
+            self.products.append(
+                {
+                    "id": product_id,
+                    "name": name,
+                    "category_id": category_id,
+                    "price": price,
+                    "brand": brand,
+                }
+            )
         logger.info("✅ Generated 100 sample products")
 
     def _generate_users(self, session, count: int):
@@ -728,9 +757,7 @@ class CompleteEcomDataMigrator:
                 "interests": interests,
             }
 
-            dob_date = self.fake.date_of_birth(
-                minimum_age=18, maximum_age=70
-            )
+            dob_date = self.fake.date_of_birth(minimum_age=18, maximum_age=70)
             date_of_birth = datetime.combine(dob_date, time(0, 0))
 
             session.execute(
@@ -1037,13 +1064,17 @@ class CompleteEcomDataMigrator:
         logger.info(f"Generating {count} search analytics records...")
 
         if not self.categories:
-            logger.warning("No categories available. Skipping filters in search analytics.")
+            logger.warning(
+                "No categories available. Skipping filters in search analytics."
+            )
             category_keys = []
         else:
             category_keys = list(self.categories.keys())
 
         if not self.brands:
-            logger.warning("No brands available. Skipping brand filters in search analytics.")
+            logger.warning(
+                "No brands available. Skipping brand filters in search analytics."
+            )
             brand_keys = []
         else:
             brand_keys = list(self.brands.keys())
@@ -1447,7 +1478,7 @@ class CompleteEcomDataMigrator:
             # Check if exists
             existing = session.execute(
                 text("SELECT id FROM ml_model_configs WHERE name = :name"),
-                {"name": config["name"]}
+                {"name": config["name"]},
             ).fetchone()
             if existing:
                 logger.info(f"ML config '{config['name']}' already exists")
@@ -1597,7 +1628,9 @@ class CompleteEcomDataMigrator:
 
         for table in tables:
             try:
-                result = session.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()
+                result = session.execute(
+                    text(f"SELECT COUNT(*) FROM {table}")
+                ).fetchone()
                 counts[table] = result[0] if result else 0
             except:
                 counts[table] = 0
@@ -1640,7 +1673,6 @@ class CompleteEcomDataMigrator:
                 "✅ Search analytics ready for performance optimization",
             ],
         }
-    
 
     def truncate_all_tables(self):
         """
@@ -1673,10 +1705,9 @@ class CompleteEcomDataMigrator:
 
             # Truncate all tables
             for schema, table in tables:
-                query = sql.SQL("TRUNCATE TABLE {}.{} RESTART IDENTITY CASCADE;").format(
-                    sql.Identifier(schema),
-                    sql.Identifier(table)
-                )
+                query = sql.SQL(
+                    "TRUNCATE TABLE {}.{} RESTART IDENTITY CASCADE;"
+                ).format(sql.Identifier(schema), sql.Identifier(table))
                 cur.execute(query)
                 print(f"✅ Truncated table: {schema}.{table}")
 
@@ -1691,22 +1722,26 @@ class CompleteEcomDataMigrator:
             print("❌ Error truncating tables:", e)
 
 
-
 # Usage example
 if __name__ == "__main__":
     # Database connection - updated for Docker environment
     # When running inside Docker container, use 'postgres' as host
     # When running locally, use 'localhost'
     import os
-    
+
     # Check if running in Docker (backend container has this env var from docker-compose)
-    if os.getenv('RUNNING_IN_DOCKER') or os.path.exists('/.dockerenv'):
-        DATABASE_URL = "postgresql://ecommerce_user:ecommerce_pass@postgres:5432/ecommerce"
+    if os.getenv("RUNNING_IN_DOCKER") or os.path.exists("/.dockerenv"):
+        DATABASE_URL = (
+            "postgresql://ecommerce_user:ecommerce_pass@postgres:5432/ecommerce"
+        )
     else:
-        DATABASE_URL = "postgresql://ecommerce_user:ecommerce_pass@localhost:5432/ecommerce"
+        DATABASE_URL = (
+            "postgresql://ecommerce_user:ecommerce_pass@localhost:5435/ecommerce"
+        )
 
     # CSV file path - will be in /app/ when running in Docker
     import os
+
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     CSV_FILE_PATH = os.path.join(SCRIPT_DIR, "products-data.csv")
 

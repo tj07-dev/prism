@@ -2,11 +2,12 @@
 Application configuration settings.
 Loads from environment variables with fallback defaults.
 """
+
 import os
 from functools import lru_cache
 from typing import Any, List, Optional
 
-from pydantic import BaseSettings, PostgresDsn, validator
+from pydantic import BaseSettings, validator
 
 
 class Settings(BaseSettings):
@@ -26,7 +27,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Security - MUST be set via environment variables
-    SECRET_KEY: str  = "ABCD1234EFGH5678IJKL9012MNOP3456QRST7890UVWX"
+    SECRET_KEY: str = "ABCD1234EFGH5678IJKL9012MNOP3456QRST7890UVWX"
     JWT_ISSUER: str = "ecommerce-backend"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1230
@@ -52,7 +53,7 @@ class Settings(BaseSettings):
                 "http://127.0.0.1:5173",
                 "http://127.0.0.1:5174",
                 "http://localhost:8000",
-                "http://127.0.0.1:8000"
+                "http://127.0.0.1:8000",
             ]
         if isinstance(v, str):
             return [i.strip() for i in v.split(",")]
@@ -61,11 +62,11 @@ class Settings(BaseSettings):
         return []
 
     # Database Configuration - Use environment variables
-    POSTGRES_SERVER: str = "postgres"
+    POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "ecommerce_user"
     POSTGRES_PASSWORD: str = "ecommerce_pass"
     POSTGRES_DB: str = "ecommerce"
-    POSTGRES_PORT: str = "5432"
+    POSTGRES_PORT: str = "5435"
 
     DATABASE_URL: Optional[str] = None
 
@@ -100,7 +101,9 @@ class Settings(BaseSettings):
 
     # AWS Bedrock Model Configuration
     BEDROCK_EMBEDDING_MODEL: str = "amazon.titan-embed-text-v1"  # Titan embeddings
-    BEDROCK_LLM_MODEL: str = "anthropic.claude-3-sonnet-20240229-v1:0"  # Claude for text generation
+    BEDROCK_LLM_MODEL: str = (
+        "anthropic.claude-3-sonnet-20240229-v1:0"  # Claude for text generation
+    )
     BEDROCK_EMBEDDING_DIMENSION: int = 1536  # Titan embedding dimension
 
     # Embedding service settings
@@ -120,7 +123,9 @@ class Settings(BaseSettings):
 
     # Image generation settings
     IMAGE_GENERATION_SIZE: str = "1024x1024"  # Default image size
-    IMAGE_STORAGE_PATH: str = "static/generated_images"  # Where to store generated images
+    IMAGE_STORAGE_PATH: str = (
+        "static/generated_images"  # Where to store generated images
+    )
     MAX_IMAGE_GENERATION_RETRIES: int = 3  # Retry failed generations
 
     # ML Model Configuration

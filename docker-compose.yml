@@ -4,17 +4,18 @@ services:
     image: pgvector/pgvector:pg18
     container_name: ecommerce-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-ecommerce_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecommerce_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      POSTGRES_USER: ecommerce_user
+      POSTGRES_PASSWORD: ecommerce_pass
+      POSTGRES_DB: ecommerce
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5435}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql
+      - ./data/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./data/add.sql:/docker-entrypoint-initdb.d/02-add.sql
       # Note: Schema is created by SQLAlchemy on backend startup
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ecommerce_user} -d ${POSTGRES_DB:-ecommerce}"]
+      test: ["CMD-SHELL", "pg_isready -U ecommerce_user -d ecommerce"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,7 +45,7 @@ services:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       HUGGINGFACE_API_TOKEN: ${HUFFINGFACE_API_TOKEN:-}
- 
+
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -88,7 +89,7 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     volumes:
