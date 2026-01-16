@@ -28,9 +28,13 @@ class MLEngineService:
         # Reuse sub-services from the training service to keep model cache consistent
         self.model_manager: MLModelManager = self.training_service.model_manager
         self.als_service: ALSModelService = self.training_service.als_service
-        self.lightgbm_service: LightGBMModelService = self.training_service.lightgbm_service
+        self.lightgbm_service: LightGBMModelService = (
+            self.training_service.lightgbm_service
+        )
         self.kmeans_service: KMeansModelService = self.training_service.kmeans_service
-        self.content_service: ContentModelService = self.training_service.content_service
+        self.content_service: ContentModelService = (
+            self.training_service.content_service
+        )
         self.hybrid_service = HybridRecommenderService(db, models_dir)
 
     # ------------------------------------------------------------------
@@ -151,7 +155,9 @@ class MLEngineService:
 
             product_id = context.get("product_id")
             if not product_id:
-                self.logger.warning("Content recommendations require a reference product_id")
+                self.logger.warning(
+                    "Content recommendations require a reference product_id"
+                )
                 return []
 
             similar_ids = self.content_service.get_recommendations(

@@ -2,6 +2,7 @@
 User Segmentation Service - Compatibility Wrapper.
 Provides unified interface to modular segmentation services.
 """
+
 from sqlalchemy.orm import Session
 
 from app.services.segmentation import RFMSegmenter, SegmentManager, SegmentRuleEngine
@@ -50,7 +51,9 @@ class UserSegmentationService:
 
     def add_user_to_segment(self, segment_id, user_id, score=None, reason=None):
         """Manually add a user to a segment."""
-        return self.segment_manager.add_user_to_segment(segment_id, user_id, score, reason)
+        return self.segment_manager.add_user_to_segment(
+            segment_id, user_id, score, reason
+        )
 
     def remove_user_from_segment(self, segment_id, user_id):
         """Remove a user from a segment."""

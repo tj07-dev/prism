@@ -62,17 +62,22 @@ class BaseProductService:
             def get_descendant_categories(cat_id):
                 """Get all descendant category IDs recursively"""
                 descendants = {cat_id}
-                children = self.db.query(ProductCategory.id).filter(
-                    ProductCategory.parent_id == cat_id
-                ).all()
+                children = (
+                    self.db.query(ProductCategory.id)
+                    .filter(ProductCategory.parent_id == cat_id)
+                    .all()
+                )
                 for (child_id,) in children:
                     descendants.update(get_descendant_categories(child_id))
                 return descendants
-            
+
             # Try to parse as UUID first, otherwise search by name
             try:
                 from uuid import UUID
-                category_uuid = UUID(category) if isinstance(category, str) else category
+
+                category_uuid = (
+                    UUID(category) if isinstance(category, str) else category
+                )
                 # Get all descendant categories
                 all_category_ids = get_descendant_categories(category_uuid)
                 query = query.join(ProductCategory).filter(

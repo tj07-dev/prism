@@ -2,8 +2,8 @@
 RFM Segmenter Service.
 Creates and manages RFM-based user segments.
 """
+
 import logging
-import uuid
 from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 class RFMSegmenter(BaseSegmentationService):
     """Service for RFM-based segmentation."""
-    
+
     def __init__(self, db: Session):
         super().__init__(db)
         self.segment_manager = SegmentManager(db)
-    
+
     def create_rfm_segments(self) -> List[Dict[str, Any]]:
         """Create standard RFM-based segments."""
         try:
@@ -32,9 +32,21 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": ">=", "value": 4},
-                            {"field": "rfm_frequency_score", "operator": ">=", "value": 4},
-                            {"field": "rfm_monetary_score", "operator": ">=", "value": 4},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": ">=",
+                                "value": 4,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": ">=",
+                                "value": 4,
+                            },
+                            {
+                                "field": "rfm_monetary_score",
+                                "operator": ">=",
+                                "value": 4,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -45,9 +57,21 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": ">=", "value": 2},
-                            {"field": "rfm_frequency_score", "operator": ">=", "value": 3},
-                            {"field": "rfm_monetary_score", "operator": ">=", "value": 3},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": ">=",
+                                "value": 2,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": ">=",
+                                "value": 3,
+                            },
+                            {
+                                "field": "rfm_monetary_score",
+                                "operator": ">=",
+                                "value": 3,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -58,9 +82,21 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": ">=", "value": 3},
-                            {"field": "rfm_frequency_score", "operator": ">=", "value": 2},
-                            {"field": "rfm_monetary_score", "operator": ">=", "value": 2},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": ">=",
+                                "value": 3,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": ">=",
+                                "value": 2,
+                            },
+                            {
+                                "field": "rfm_monetary_score",
+                                "operator": ">=",
+                                "value": 2,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -71,8 +107,16 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": ">=", "value": 4},
-                            {"field": "rfm_frequency_score", "operator": "<=", "value": 2},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": ">=",
+                                "value": 4,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": "<=",
+                                "value": 2,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -83,9 +127,21 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": "<=", "value": 2},
-                            {"field": "rfm_frequency_score", "operator": ">=", "value": 3},
-                            {"field": "rfm_monetary_score", "operator": ">=", "value": 3},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": "<=",
+                                "value": 2,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": ">=",
+                                "value": 3,
+                            },
+                            {
+                                "field": "rfm_monetary_score",
+                                "operator": ">=",
+                                "value": 3,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -96,9 +152,21 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": "<=", "value": 2},
-                            {"field": "rfm_frequency_score", "operator": ">=", "value": 4},
-                            {"field": "rfm_monetary_score", "operator": ">=", "value": 4},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": "<=",
+                                "value": 2,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": ">=",
+                                "value": 4,
+                            },
+                            {
+                                "field": "rfm_monetary_score",
+                                "operator": ">=",
+                                "value": 4,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -109,9 +177,21 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": "<=", "value": 2},
-                            {"field": "rfm_frequency_score", "operator": "<=", "value": 2},
-                            {"field": "rfm_monetary_score", "operator": "<=", "value": 2},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": "<=",
+                                "value": 2,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": "<=",
+                                "value": 2,
+                            },
+                            {
+                                "field": "rfm_monetary_score",
+                                "operator": "<=",
+                                "value": 2,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -122,8 +202,16 @@ class RFMSegmenter(BaseSegmentationService):
                     "segment_type": "rfm",
                     "criteria": {
                         "conditions": [
-                            {"field": "rfm_recency_score", "operator": "<=", "value": 1},
-                            {"field": "rfm_frequency_score", "operator": "<=", "value": 1},
+                            {
+                                "field": "rfm_recency_score",
+                                "operator": "<=",
+                                "value": 1,
+                            },
+                            {
+                                "field": "rfm_frequency_score",
+                                "operator": "<=",
+                                "value": 1,
+                            },
                         ],
                         "logic": "AND",
                     },
@@ -139,16 +227,22 @@ class RFMSegmenter(BaseSegmentationService):
                         .filter(UserSegment.name == segment_data["name"])
                         .first()
                     )
-                    
+
                     if not existing:
-                        segment = self.segment_manager.create_segment(segment_data, "system")
+                        segment = self.segment_manager.create_segment(
+                            segment_data, "system"
+                        )
                         created_segments.append(segment)
                         self.logger.info(f"Created RFM segment: {segment_data['name']}")
                     else:
-                        self.logger.info(f"RFM segment already exists: {segment_data['name']}")
+                        self.logger.info(
+                            f"RFM segment already exists: {segment_data['name']}"
+                        )
 
                 except Exception as e:
-                    self.logger.error(f"Error creating RFM segment {segment_data['name']}: {e}")
+                    self.logger.error(
+                        f"Error creating RFM segment {segment_data['name']}: {e}"
+                    )
                     continue
 
             return created_segments

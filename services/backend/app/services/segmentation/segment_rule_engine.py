@@ -2,6 +2,7 @@
 Segment Rule Engine.
 Applies segmentation rules and queries to find matching users.
 """
+
 import logging
 import math
 import uuid
@@ -17,7 +18,7 @@ from sqlalchemy import (
     or_,
     select,
 )
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import aliased
 
 from app.models import Order, User
 from app.models.ml_models import UserSegment, UserSegmentMembership
@@ -165,9 +166,8 @@ class SegmentRuleEngine(BaseSegmentationService):
     def _evaluate_attribute_segment(self, rules: Dict[str, Any]) -> List[uuid.UUID]:
         order_stats = self._build_order_stats_subquery()
 
-        query = (
-            self.db.query(User.id.label("user_id"))
-            .outerjoin(order_stats, order_stats.c.user_id == User.id)
+        query = self.db.query(User.id.label("user_id")).outerjoin(
+            order_stats, order_stats.c.user_id == User.id
         )
 
         refs = {"order_stats": order_stats}
@@ -246,13 +246,19 @@ class SegmentRuleEngine(BaseSegmentationService):
             return None
 
         column_expr = resolver(self, refs)
-        normalized_value = self._normalize_for_operator(operator, condition.get("value"), definition)
+        normalized_value = self._normalize_for_operator(
+            operator, condition.get("value"), definition
+        )
         if normalized_value is None:
             return None
 
-        return self._build_operator_expression(column_expr, operator, normalized_value, definition)
+        return self._build_operator_expression(
+            column_expr, operator, normalized_value, definition
+        )
 
-    def _build_operator_expression(self, column, operator: str, value, definition: Dict[str, Any]):
+    def _build_operator_expression(
+        self, column, operator: str, value, definition: Dict[str, Any]
+    ):
         if operator == "equals":
             return column == value
         if operator == "not_equals":
@@ -322,7 +328,9 @@ class SegmentRuleEngine(BaseSegmentationService):
                 Order.user_id.label("user_id"),
                 func.coalesce(func.sum(Order.total_amount), 0).label("total_spent"),
                 func.count(Order.id).label("order_count"),
-                func.coalesce(func.avg(Order.total_amount), 0).label("average_order_value"),
+                func.coalesce(func.avg(Order.total_amount), 0).label(
+                    "average_order_value"
+                ),
                 func.max(Order.created_at).label("last_purchase_at"),
                 func.min(Order.created_at).label("first_purchase_at"),
             )
@@ -355,7 +363,9 @@ class SegmentRuleEngine(BaseSegmentationService):
 
         for user_id, last_purchase, order_count, total_spent in rows:
             recency_days = (
-                (now - last_purchase).days if isinstance(last_purchase, datetime) else math.inf
+                (now - last_purchase).days
+                if isinstance(last_purchase, datetime)
+                else math.inf
             )
             total_value = float(total_spent or 0)
             order_value = float(order_count or 0)
@@ -381,11 +391,15 @@ class SegmentRuleEngine(BaseSegmentationService):
 
         return metrics
 
-    def _score_metric(self, values: Dict[uuid.UUID, float], reverse: bool) -> Dict[uuid.UUID, int]:
+    def _score_metric(
+        self, values: Dict[uuid.UUID, float], reverse: bool
+    ) -> Dict[uuid.UUID, int]:
         if not values:
             return {}
 
-        sorted_items = sorted(values.items(), key=lambda item: item[1], reverse=not reverse)
+        sorted_items = sorted(
+            values.items(), key=lambda item: item[1], reverse=not reverse
+        )
         total = len(sorted_items)
         bucket_size = max(1, total // 5)
 
@@ -396,8 +410,12 @@ class SegmentRuleEngine(BaseSegmentationService):
             scores[user_id] = max(1, min(5, score))
         return scores
 
-    def _persist_segment_memberships(self, segment: UserSegment, user_ids: Sequence[uuid.UUID]) -> None:
-        normalized_ids = [self._normalize_user_id(user_id) for user_id in user_ids if user_id]
+    def _persist_segment_memberships(
+        self, segment: UserSegment, user_ids: Sequence[uuid.UUID]
+    ) -> None:
+        normalized_ids = [
+            self._normalize_user_id(user_id) for user_id in user_ids if user_id
+        ]
 
         self.db.query(UserSegmentMembership).filter(
             UserSegmentMembership.segment_id == segment.id
@@ -437,7 +455,9 @@ class SegmentRuleEngine(BaseSegmentationService):
                 for value in values
             ]
             return [value for value in normalized_values if value is not None]
-        return self._normalize_simple_value(raw_value, definition.get("type", "string"), definition)
+        return self._normalize_simple_value(
+            raw_value, definition.get("type", "string"), definition
+        )
 
     def _normalize_simple_value(
         self,
@@ -485,7 +505,11 @@ class SegmentRuleEngine(BaseSegmentationService):
             text = text[:-1] + "+00:00"
         for fmt in (None, "%Y-%m-%d"):
             try:
-                return datetime.fromisoformat(text) if fmt is None else datetime.strptime(text, fmt)
+                return (
+                    datetime.fromisoformat(text)
+                    if fmt is None
+                    else datetime.strptime(text, fmt)
+                )
             except ValueError:
                 continue
         return None

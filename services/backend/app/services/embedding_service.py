@@ -5,6 +5,7 @@ This service generates vector embeddings for products using Amazon Titan
 embeddings via AWS Bedrock. Embeddings are used for similarity search
 and content-based recommendations.
 """
+
 import asyncio
 import hashlib
 import json
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import boto3
-from botocore.exceptions import ClientError, BotoCoreError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.config import get_settings
 from app.models import Product
@@ -121,7 +122,7 @@ class EmbeddingService:
                 exc_info=True,
             )
             return None
-        
+
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """Generate embedding using Amazon Titan"""
 
@@ -187,7 +188,9 @@ class EmbeddingService:
                 )
 
         except Exception as e:
-            logger.error(f"Error in batch embedding generation: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error in batch embedding generation: {str(e)}", exc_info=True
+            )
 
         return results
 
@@ -246,9 +249,7 @@ class EmbeddingService:
             return None
 
         except Exception as e:
-            logger.error(
-                f"Unexpected error calling Bedrock: {str(e)}", exc_info=True
-            )
+            logger.error(f"Unexpected error calling Bedrock: {str(e)}", exc_info=True)
             return None
 
     def _create_product_text(self, product: Product) -> str:
@@ -342,9 +343,7 @@ class EmbeddingService:
         # Simple cache size management: remove oldest if too large
         if len(self._cache) > 10000:  # Arbitrary limit
             # Remove oldest 10% of entries
-            sorted_keys = sorted(
-                self._cache.keys(), key=lambda k: self._cache[k][1]
-            )
+            sorted_keys = sorted(self._cache.keys(), key=lambda k: self._cache[k][1])
             for key in sorted_keys[: len(sorted_keys) // 10]:
                 del self._cache[key]
 

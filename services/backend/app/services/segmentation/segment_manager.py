@@ -2,6 +2,7 @@
 Segment Manager Service.
 Handles CRUD operations for user segments.
 """
+
 import logging
 import uuid
 from datetime import datetime
@@ -20,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 class SegmentManager(BaseSegmentationService):
     """Service for managing user segments."""
-    
+
     def __init__(self, db: Session):
         super().__init__(db)
         self.rule_engine = SegmentRuleEngine(db)
-    
+
     def create_segment(
         self, segment_data: Dict[str, Any], user_id: str
     ) -> Dict[str, Any]:
@@ -172,7 +173,7 @@ class SegmentManager(BaseSegmentationService):
                 .filter(UserSegment.id == uuid.UUID(segment_id))
                 .first()
             )
-            
+
             if not segment:
                 return False
 
@@ -204,7 +205,9 @@ class SegmentManager(BaseSegmentationService):
                 if "is_active" in filters:
                     query = query.filter(UserSegment.is_active == filters["is_active"])
                 if "segment_type" in filters:
-                    query = query.filter(UserSegment.segment_type == filters["segment_type"])
+                    query = query.filter(
+                        UserSegment.segment_type == filters["segment_type"]
+                    )
 
             segments = (
                 query.order_by(desc(UserSegment.created_at))
@@ -227,7 +230,7 @@ class SegmentManager(BaseSegmentationService):
                 .filter(UserSegment.id == uuid.UUID(segment_id))
                 .first()
             )
-            
+
             if not segment:
                 raise ValueError(f"Segment not found: {segment_id}")
 
@@ -256,7 +259,9 @@ class SegmentManager(BaseSegmentationService):
                 "success": True,
                 "segment_id": segment_id,
                 "new_size": segment.actual_size,
-                "updated_at": segment.last_updated.isoformat() if segment.last_updated else None,
+                "updated_at": segment.last_updated.isoformat()
+                if segment.last_updated
+                else None,
             }
 
         except Exception as e:
@@ -293,7 +298,7 @@ class SegmentManager(BaseSegmentationService):
                 .filter(
                     and_(
                         UserSegmentMembership.segment_id == uuid.UUID(segment_id),
-                        UserSegmentMembership.is_active == True
+                        UserSegmentMembership.is_active == True,
                     )
                 )
                 .count()
@@ -305,7 +310,7 @@ class SegmentManager(BaseSegmentationService):
                 .filter(
                     and_(
                         UserSegmentMembership.segment_id == uuid.UUID(segment_id),
-                        UserSegmentMembership.is_active == True
+                        UserSegmentMembership.is_active == True,
                     )
                 )
                 .order_by(desc(UserSegmentMembership.assigned_at))
@@ -319,9 +324,15 @@ class SegmentManager(BaseSegmentationService):
             for membership in memberships:
                 user_data = {
                     "user_id": str(membership.user_id),
-                    "membership_score": float(membership.membership_score) if membership.membership_score else None,
-                    "assigned_at": membership.assigned_at.isoformat() if membership.assigned_at else None,
-                    "last_evaluated": membership.last_evaluated.isoformat() if membership.last_evaluated else None,
+                    "membership_score": float(membership.membership_score)
+                    if membership.membership_score
+                    else None,
+                    "assigned_at": membership.assigned_at.isoformat()
+                    if membership.assigned_at
+                    else None,
+                    "last_evaluated": membership.last_evaluated.isoformat()
+                    if membership.last_evaluated
+                    else None,
                     "assignment_reason": membership.assignment_reason,
                 }
 
@@ -380,7 +391,7 @@ class SegmentManager(BaseSegmentationService):
                 .filter(
                     and_(
                         UserSegmentMembership.segment_id == uuid.UUID(segment_id),
-                        UserSegmentMembership.user_id == uuid.UUID(user_id)
+                        UserSegmentMembership.user_id == uuid.UUID(user_id),
                     )
                 )
                 .first()
@@ -391,11 +402,15 @@ class SegmentManager(BaseSegmentationService):
                 if not existing.is_active:
                     existing.is_active = True
                     existing.last_evaluated = datetime.utcnow()
-                    existing.membership_score = score if score is not None else existing.membership_score
+                    existing.membership_score = (
+                        score if score is not None else existing.membership_score
+                    )
                     existing.assignment_reason = reason or "Manually reactivated"
                     self.db.commit()
 
-                    self.logger.info(f"Reactivated user {user_id} in segment {segment_id}")
+                    self.logger.info(
+                        f"Reactivated user {user_id} in segment {segment_id}"
+                    )
                     return {
                         "success": True,
                         "action": "reactivated",
@@ -463,7 +478,7 @@ class SegmentManager(BaseSegmentationService):
                     and_(
                         UserSegmentMembership.segment_id == uuid.UUID(segment_id),
                         UserSegmentMembership.user_id == uuid.UUID(user_id),
-                        UserSegmentMembership.is_active == True
+                        UserSegmentMembership.is_active == True,
                     )
                 )
                 .first()

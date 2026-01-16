@@ -4,6 +4,7 @@ Database configuration and session management.
 This module sets up SQLAlchemy engine, session factory, and base model.
 All database credentials are loaded from environment variables via Settings.
 """
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker

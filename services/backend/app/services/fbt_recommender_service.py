@@ -16,6 +16,7 @@ This is particularly effective for:
 - Cross-sell recommendations
 - Shopping cart suggestions
 """
+
 import json
 import logging
 import os
@@ -155,7 +156,7 @@ class FBTRecommenderService:
             logger.info(
                 f"Created {len(transactions)} multi-item transactions "
                 f"from {len(grouped)} total orders "
-                f"({len(transactions)/len(grouped)*100:.1f}% multi-item)"
+                f"({len(transactions) / len(grouped) * 100:.1f}% multi-item)"
             )
 
             return transactions
@@ -242,9 +243,7 @@ class FBTRecommenderService:
             rules = rules[rules["lift"] >= self.min_lift]
 
             if rules.empty:
-                logger.warning(
-                    f"No rules passed min_lift={self.min_lift} threshold"
-                )
+                logger.warning(f"No rules passed min_lift={self.min_lift} threshold")
                 return
 
             logger.info(
@@ -454,9 +453,7 @@ class FBTRecommenderService:
             logger.error(f"Failed to train FP-Growth model: {e}", exc_info=True)
             raise
 
-    def get_recommendations(
-        self, product_id: int, limit: int = 5
-    ) -> List[Dict]:
+    def get_recommendations(self, product_id: int, limit: int = 5) -> List[Dict]:
         """
         Get 'Frequently Bought Together' recommendations for a product.
 
@@ -558,7 +555,9 @@ class FBTRecommenderService:
             "is_trained": True,
             "n_products_with_recommendations": n_products,
             "total_recommendations": total_recs,
-            "avg_recommendations_per_product": round(total_recs / n_products, 2) if n_products > 0 else 0,
+            "avg_recommendations_per_product": round(total_recs / n_products, 2)
+            if n_products > 0
+            else 0,
             "min_support": self.min_support,
             "min_confidence": self.min_confidence,
             "min_lift": self.min_lift,

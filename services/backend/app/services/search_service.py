@@ -3,7 +3,7 @@ import time
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import asc, desc, or_, cast, Text
+from sqlalchemy import Text, asc, cast, desc, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings

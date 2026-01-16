@@ -5,17 +5,16 @@ This service generates marketing images like product posters and promotional
 banners using Google's Gemini/Imagen API. Supports intelligent prompt generation
 based on target segments, product information, and brand guidelines.
 """
+
 import base64
 import logging
 import os
-import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
 import aiohttp
 import google.generativeai as genai
-from google.generativeai.types import GenerationConfig
 
 from app.core.config import get_settings
 
@@ -249,8 +248,8 @@ class ImageGenerationService:
 
         model_name = getattr(settings, "GEMINI_IMAGE_MODEL", "imagen-4.0-generate-001")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:predict"
-        
-        print(url,"\n\n\n\n\n\n\n url",settings.GOOGLE_API_KEY)
+
+        print(url, "\n\n\n\n\n\n\n url", settings.GOOGLE_API_KEY)
 
         headers = {
             "Content-Type": "application/json",
@@ -271,7 +270,9 @@ class ImageGenerationService:
 
         for attempt in range(max_retries):
             try:
-                logger.info(f"Generating image via Imagen 4 API (attempt {attempt + 1}/{max_retries})")
+                logger.info(
+                    f"Generating image via Imagen 4 API (attempt {attempt + 1}/{max_retries})"
+                )
 
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
@@ -301,13 +302,17 @@ class ImageGenerationService:
                                     or None
                                 )
                                 if not image_base64:
-                                    logger.warning(f"Prediction {i} missing base64 data")
+                                    logger.warning(
+                                        f"Prediction {i} missing base64 data"
+                                    )
                                     continue
 
                                 images_base64.append(image_base64)
 
                                 if output_path:
-                                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                                    os.makedirs(
+                                        os.path.dirname(output_path), exist_ok=True
+                                    )
                                     base, ext = os.path.splitext(output_path)
                                     file_path = f"{base}_{i + 1}{ext or '.png'}"
                                     with open(file_path, "wb") as f:
@@ -324,7 +329,9 @@ class ImageGenerationService:
 
                         else:
                             err_txt = await response.text()
-                            logger.error(f"Imagen 4 API error ({response.status}): {err_txt}")
+                            logger.error(
+                                f"Imagen 4 API error ({response.status}): {err_txt}"
+                            )
                             if attempt < max_retries - 1:
                                 continue
                             return {
@@ -343,7 +350,12 @@ class ImageGenerationService:
                 if attempt == max_retries - 1:
                     return {"success": False, "error": str(e), "prompt_used": prompt}
 
-        return {"success": False, "error": "Max retries exceeded", "prompt_used": prompt}
+        return {
+            "success": False,
+            "error": "Max retries exceeded",
+            "prompt_used": prompt,
+        }
+
     async def generate_product_poster(
         self,
         product_name: str,

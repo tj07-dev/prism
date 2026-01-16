@@ -11,7 +11,7 @@ from sqlalchemy import desc, text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Product, SearchAnalytics, User, Order, OrderItem, RecommendationResult
+from app.models import Order, OrderItem, Product, RecommendationResult, User
 from app.services.explainability_service import ExplainabilityService
 from app.services.ml.als_model_service import ALSModelService
 from app.services.ml.content_model_service import ContentModelService
@@ -73,13 +73,17 @@ class RecommendationService:
         Returns:
             List of recommendation dictionaries with products and explanations
         """
-        logger.info(f"Getting user recommendations for user_id={user_id}, type={recommendation_type}, limit={limit}")
+        logger.info(
+            f"Getting user recommendations for user_id={user_id}, type={recommendation_type}, limit={limit}"
+        )
 
         recommendations = []
 
         # Try ML-based recommendations for authenticated users
         if user_id:
-            ml_recommendations = await self._get_ml_recommendations(user_id, limit, context)
+            ml_recommendations = await self._get_ml_recommendations(
+                user_id, limit, context
+            )
             if ml_recommendations:
                 recommendations.extend(ml_recommendations)
                 logger.info(f"Got {len(ml_recommendations)} ML-based recommendations")
@@ -87,14 +91,18 @@ class RecommendationService:
         # If we need more recommendations, add fallback methods
         if len(recommendations) < limit:
             remaining_limit = limit - len(recommendations)
-            fallback_recs = await self._get_fallback_recommendations(user_id, remaining_limit, context)
+            fallback_recs = await self._get_fallback_recommendations(
+                user_id, remaining_limit, context
+            )
             recommendations.extend(fallback_recs)
             logger.info(f"Added {len(fallback_recs)} fallback recommendations")
 
         # Add recently viewed recommendations if we still need more
         if user_id and len(recommendations) < limit:
             remaining_limit = limit - len(recommendations)
-            viewed_recs = await self._get_recently_viewed_recommendations(user_id, remaining_limit)
+            viewed_recs = await self._get_recently_viewed_recommendations(
+                user_id, remaining_limit
+            )
             recommendations.extend(viewed_recs)
             logger.info(f"Added {len(viewed_recs)} recently viewed recommendations")
 
@@ -103,28 +111,33 @@ class RecommendationService:
         final_recommendations = unique_recommendations[:limit]
 
         # Enrich with full product data
-        final_recommendations = await self._enrich_recommendations_with_products(final_recommendations)
+        final_recommendations = await self._enrich_recommendations_with_products(
+            final_recommendations
+        )
 
         # Add explainability
         segment_name = self._get_user_segment_name(user_id) if user_id else None
-        final_recommendations = self.explainability_service.enhance_recommendations_with_explanations(
-            user_id=user_id,
-            recommendations=final_recommendations,
-            segment_name=segment_name,
+        final_recommendations = (
+            self.explainability_service.enhance_recommendations_with_explanations(
+                user_id=user_id,
+                recommendations=final_recommendations,
+                segment_name=segment_name,
+            )
         )
 
         # Track recommendations
         if user_id:
-            self._track_recommendations(user_id, final_recommendations, recommendation_type)
+            self._track_recommendations(
+                user_id, final_recommendations, recommendation_type
+            )
 
-        logger.info(f"Returning {len(final_recommendations)} final recommendations with explanations")
+        logger.info(
+            f"Returning {len(final_recommendations)} final recommendations with explanations"
+        )
         return final_recommendations
 
     async def get_product_recommendations(
-        self,
-        product_id: str,
-        limit: int = 10,
-        user_id: Optional[str] = None
+        self, product_id: str, limit: int = 10, user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Get products similar to given product using ML models.
@@ -137,64 +150,73 @@ class RecommendationService:
         Returns:
             List of similar products with explanations
         """
-        logger.info(f"Getting product recommendations for product_id={product_id}, limit={limit}, user_id={user_id}")
+        logger.info(
+            f"Getting product recommendations for product_id={product_id}, limit={limit}, user_id={user_id}"
+        )
 
         recommendations = []
 
         # Try content-based ML model first (using embeddings + TF-IDF)
         ml_recommendations = await self._get_content_based_ml_recommendations(
-            product_id=product_id,
-            user_id=user_id,
-            limit=limit
+            product_id=product_id, user_id=user_id, limit=limit
         )
 
         if ml_recommendations:
             recommendations.extend(ml_recommendations)
-            logger.info(f"Got {len(ml_recommendations)} content-based ML recommendations")
+            logger.info(
+                f"Got {len(ml_recommendations)} content-based ML recommendations"
+            )
 
         # If ML model doesn't provide enough, use vector similarity fallback
         if len(recommendations) < limit:
             remaining_limit = limit - len(recommendations)
-            similar_products = await self.get_similar_products(product_id, remaining_limit * 2)
+            similar_products = await self.get_similar_products(
+                product_id, remaining_limit * 2
+            )
 
             for product in similar_products:
                 if len(recommendations) >= limit:
                     break
 
-                recommendations.append({
-                    "product_id": str(product.id),
-                    "product": product,
-                    "score": 0.7,  # Default similarity score
-                    "algorithm": "vector_similarity",
-                    "reason": "Similar product features",
-                })
+                recommendations.append(
+                    {
+                        "product_id": str(product.id),
+                        "product": product,
+                        "score": 0.7,  # Default similarity score
+                        "algorithm": "vector_similarity",
+                        "reason": "Similar product features",
+                    }
+                )
 
         # Remove duplicates and limit
         unique_recommendations = self._deduplicate_recommendations(recommendations)
         final_recommendations = unique_recommendations[:limit]
 
         # Enrich with product data
-        final_recommendations = await self._enrich_recommendations_with_products(final_recommendations)
+        final_recommendations = await self._enrich_recommendations_with_products(
+            final_recommendations
+        )
 
         # Add explainability
-        final_recommendations = self.explainability_service.enhance_recommendations_with_explanations(
-            user_id=user_id,
-            recommendations=final_recommendations,
-            segment_name=None
+        final_recommendations = (
+            self.explainability_service.enhance_recommendations_with_explanations(
+                user_id=user_id,
+                recommendations=final_recommendations,
+                segment_name=None,
+            )
         )
 
         # Track recommendations
         if user_id:
             self._track_recommendations(user_id, final_recommendations, "product_page")
 
-        logger.info(f"Returning {len(final_recommendations)} product recommendations with explanations")
+        logger.info(
+            f"Returning {len(final_recommendations)} product recommendations with explanations"
+        )
         return final_recommendations
 
     async def get_fbt_recommendations(
-        self,
-        product_id: str,
-        limit: int = 5,
-        user_id: Optional[str] = None
+        self, product_id: str, limit: int = 5, user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Get Frequently Bought Together recommendations using FP-Growth algorithm.
@@ -207,7 +229,9 @@ class RecommendationService:
         Returns:
             List of FBT recommendations with confidence scores and explanations
         """
-        logger.info(f"Getting FBT recommendations for product_id={product_id}, limit={limit}")
+        logger.info(
+            f"Getting FBT recommendations for product_id={product_id}, limit={limit}"
+        )
 
         try:
             from app.services.fbt_recommender_service import FBTRecommenderService
@@ -216,32 +240,42 @@ class RecommendationService:
             fbt_service = FBTRecommenderService(db=self.db)
 
             # Get FBT recommendations
-            fbt_results = fbt_service.get_recommendations(product_id=product_id, limit=limit)
+            fbt_results = fbt_service.get_recommendations(
+                product_id=product_id, limit=limit
+            )
 
             recommendations = []
             for fbt_rec in fbt_results:
-                product = self.db.query(Product).filter(Product.id == fbt_rec["product_id"]).first()
+                product = (
+                    self.db.query(Product)
+                    .filter(Product.id == fbt_rec["product_id"])
+                    .first()
+                )
                 if product and product.is_active and product.in_stock:
-                    recommendations.append({
-                        "product_id": str(product.id),
-                        "product": product,
-                        "score": fbt_rec.get("confidence", 0.5),
-                        "algorithm": "fbt",
-                        "reason": f"Frequently bought together (confidence: {fbt_rec.get('confidence', 0.5):.2f})",
-                        "reference_product_id": product_id,
-                        "confidence": fbt_rec.get("confidence"),
-                        "lift": fbt_rec.get("lift"),
-                        "support": fbt_rec.get("support"),
-                    })
+                    recommendations.append(
+                        {
+                            "product_id": str(product.id),
+                            "product": product,
+                            "score": fbt_rec.get("confidence", 0.5),
+                            "algorithm": "fbt",
+                            "reason": f"Frequently bought together (confidence: {fbt_rec.get('confidence', 0.5):.2f})",
+                            "reference_product_id": product_id,
+                            "confidence": fbt_rec.get("confidence"),
+                            "lift": fbt_rec.get("lift"),
+                            "support": fbt_rec.get("support"),
+                        }
+                    )
 
             # Enrich with product data
-            recommendations = await self._enrich_recommendations_with_products(recommendations)
+            recommendations = await self._enrich_recommendations_with_products(
+                recommendations
+            )
 
             # Add explainability
-            recommendations = self.explainability_service.enhance_recommendations_with_explanations(
-                user_id=user_id,
-                recommendations=recommendations,
-                segment_name=None
+            recommendations = (
+                self.explainability_service.enhance_recommendations_with_explanations(
+                    user_id=user_id, recommendations=recommendations, segment_name=None
+                )
             )
 
             # Track recommendations
@@ -256,7 +290,9 @@ class RecommendationService:
             # Fallback to similar products
             return await self.get_product_recommendations(product_id, limit, user_id)
 
-    async def get_trending_products(self, limit: int = 20, days: int = 7) -> List[Dict[str, Any]]:
+    async def get_trending_products(
+        self, limit: int = 20, days: int = 7
+    ) -> List[Dict[str, Any]]:
         """
         Get trending products based on recent views and cart additions.
 
@@ -303,22 +339,26 @@ class RecommendationService:
                 LIMIT :limit
             """)
 
-            results = self.db.execute(trending_query, {"cutoff_date": cutoff_date, "limit": limit}).fetchall()
+            results = self.db.execute(
+                trending_query, {"cutoff_date": cutoff_date, "limit": limit}
+            ).fetchall()
 
             recommendations = []
             for row in results:
                 product = self.db.query(Product).filter(Product.id == row.id).first()
                 if product:
                     score = min(1.0, row.trending_score / 100.0)  # Normalize score
-                    recommendations.append({
-                        "product_id": str(product.id),
-                        "product": product,
-                        "score": score,
-                        "algorithm": "trending",
-                        "reason": f"Trending (viewed {row.view_count} times, {row.cart_add_count} cart adds)",
-                        "view_count": row.view_count,
-                        "cart_add_count": row.cart_add_count,
-                    })
+                    recommendations.append(
+                        {
+                            "product_id": str(product.id),
+                            "product": product,
+                            "score": score,
+                            "algorithm": "trending",
+                            "reason": f"Trending (viewed {row.view_count} times, {row.cart_add_count} cart adds)",
+                            "view_count": row.view_count,
+                            "cart_add_count": row.cart_add_count,
+                        }
+                    )
 
             # Fallback if no trending data
             if not recommendations:
@@ -326,13 +366,15 @@ class RecommendationService:
                 return await self.get_popular_products(limit, days=30)
 
             # Enrich with product data
-            recommendations = await self._enrich_recommendations_with_products(recommendations)
+            recommendations = await self._enrich_recommendations_with_products(
+                recommendations
+            )
 
             # Add explainability
-            recommendations = self.explainability_service.enhance_recommendations_with_explanations(
-                user_id=None,
-                recommendations=recommendations,
-                segment_name=None
+            recommendations = (
+                self.explainability_service.enhance_recommendations_with_explanations(
+                    user_id=None, recommendations=recommendations, segment_name=None
+                )
             )
 
             logger.info(f"Returning {len(recommendations)} trending products")
@@ -344,7 +386,9 @@ class RecommendationService:
             # Fallback to popular products
             return await self.get_popular_products(limit, days=30)
 
-    async def get_popular_products(self, limit: int = 20, days: int = 30) -> List[Dict[str, Any]]:
+    async def get_popular_products(
+        self, limit: int = 20, days: int = 30
+    ) -> List[Dict[str, Any]]:
         """
         Get popular products based on recent purchases.
 
@@ -380,22 +424,26 @@ class RecommendationService:
                 LIMIT :limit
             """)
 
-            results = self.db.execute(popular_query, {"cutoff_date": cutoff_date, "limit": limit}).fetchall()
+            results = self.db.execute(
+                popular_query, {"cutoff_date": cutoff_date, "limit": limit}
+            ).fetchall()
 
             recommendations = []
             for row in results:
                 product = self.db.query(Product).filter(Product.id == row.id).first()
                 if product:
                     score = min(1.0, row.order_count / 100.0)  # Normalize score
-                    recommendations.append({
-                        "product_id": str(product.id),
-                        "product": product,
-                        "score": score,
-                        "algorithm": "popular",
-                        "reason": f"Popular ({row.order_count} recent orders)",
-                        "order_count": row.order_count,
-                        "total_quantity": row.total_quantity,
-                    })
+                    recommendations.append(
+                        {
+                            "product_id": str(product.id),
+                            "product": product,
+                            "score": score,
+                            "algorithm": "popular",
+                            "reason": f"Popular ({row.order_count} recent orders)",
+                            "order_count": row.order_count,
+                            "total_quantity": row.total_quantity,
+                        }
+                    )
 
             # Fallback if no popular data - return recent products
             if not recommendations:
@@ -403,13 +451,15 @@ class RecommendationService:
                 return await self.get_new_arrivals(limit, days=90)
 
             # Enrich with product data
-            recommendations = await self._enrich_recommendations_with_products(recommendations)
+            recommendations = await self._enrich_recommendations_with_products(
+                recommendations
+            )
 
             # Add explainability
-            recommendations = self.explainability_service.enhance_recommendations_with_explanations(
-                user_id=None,
-                recommendations=recommendations,
-                segment_name=None
+            recommendations = (
+                self.explainability_service.enhance_recommendations_with_explanations(
+                    user_id=None, recommendations=recommendations, segment_name=None
+                )
             )
 
             logger.info(f"Returning {len(recommendations)} popular products")
@@ -420,7 +470,9 @@ class RecommendationService:
             self.db.rollback()
             return await self.get_new_arrivals(limit, days=90)
 
-    async def get_new_arrivals(self, limit: int = 20, days: int = 30) -> List[Dict[str, Any]]:
+    async def get_new_arrivals(
+        self, limit: int = 20, days: int = 30
+    ) -> List[Dict[str, Any]]:
         """
         Get newly added products.
 
@@ -441,7 +493,7 @@ class RecommendationService:
                 .filter(
                     Product.is_active == True,
                     Product.in_stock == True,
-                    Product.created_at >= cutoff_date
+                    Product.created_at >= cutoff_date,
                 )
                 .order_by(Product.created_at.desc())
                 .limit(limit)
@@ -450,22 +502,26 @@ class RecommendationService:
 
             recommendations = []
             for product in products:
-                recommendations.append({
-                    "product_id": str(product.id),
-                    "product": product,
-                    "score": 0.75,
-                    "algorithm": "new_arrivals",
-                    "reason": f"New arrival",
-                })
+                recommendations.append(
+                    {
+                        "product_id": str(product.id),
+                        "product": product,
+                        "score": 0.75,
+                        "algorithm": "new_arrivals",
+                        "reason": "New arrival",
+                    }
+                )
 
             # Enrich with product data
-            recommendations = await self._enrich_recommendations_with_products(recommendations)
+            recommendations = await self._enrich_recommendations_with_products(
+                recommendations
+            )
 
             # Add explainability
-            recommendations = self.explainability_service.enhance_recommendations_with_explanations(
-                user_id=None,
-                recommendations=recommendations,
-                segment_name=None
+            recommendations = (
+                self.explainability_service.enhance_recommendations_with_explanations(
+                    user_id=None, recommendations=recommendations, segment_name=None
+                )
             )
 
             logger.info(f"Returning {len(recommendations)} new arrivals")
@@ -477,9 +533,7 @@ class RecommendationService:
             return []
 
     async def get_similar_products(
-        self,
-        product_id: str,
-        limit: int = 10
+        self, product_id: str, limit: int = 10
     ) -> List[Product]:
         """
         Get products similar to given product using vector similarity.
@@ -539,10 +593,7 @@ class RecommendationService:
         return model
 
     async def _get_ml_recommendations(
-        self,
-        user_id: str,
-        limit: int,
-        context: Optional[Dict[str, Any]]
+        self, user_id: str, limit: int, context: Optional[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Get recommendations using trained ML models."""
 
@@ -563,7 +614,9 @@ class RecommendationService:
             user_key = self._normalize_uuid(user_id)
             seed_product_id = None
             if context:
-                seed_product_id = context.get("product_id") or context.get("seed_product_id")
+                seed_product_id = context.get("product_id") or context.get(
+                    "seed_product_id"
+                )
 
             if cf_model or content_model:
                 hybrid_recs = self.hybrid_service.get_recommendations(
@@ -572,9 +625,7 @@ class RecommendationService:
                     content_model=content_model,
                     n_recommendations=limit,
                 )
-                append_unique(
-                    self._build_hybrid_recommendations(hybrid_recs)
-                )
+                append_unique(self._build_hybrid_recommendations(hybrid_recs))
 
             if len(recommendations) < limit and cf_model:
                 remaining = limit - len(recommendations)
@@ -593,7 +644,9 @@ class RecommendationService:
                 )
 
             if len(recommendations) < limit and content_model:
-                recent_product = self._get_user_recent_product(user_id) or seed_product_id
+                recent_product = (
+                    self._get_user_recent_product(user_id) or seed_product_id
+                )
                 if recent_product:
                     remaining = limit - len(recommendations)
                     content_ids = self.content_service.get_recommendations(
@@ -614,13 +667,10 @@ class RecommendationService:
             logger.error("Error getting ML recommendations: %s", exc, exc_info=True)
 
         return recommendations
-    
+
     async def _get_collaborative_ml_recommendations(
-        self,
-        user_id: str,
-        context: Optional[Dict[str, Any]],
-        limit: int
-    ) :
+        self, user_id: str, context: Optional[Dict[str, Any]], limit: int
+    ):
         """Get collaborative filtering recommendations using the trained ALS model."""
         try:
             cf_model = self._get_or_load_model("als")
@@ -650,17 +700,16 @@ class RecommendationService:
             return await self._get_simple_collaborative_recommendations(user_id, limit)
 
     async def _get_content_based_ml_recommendations(
-        self,
-        product_id: str,
-        user_id: Optional[str],
-        limit: int
+        self, product_id: str, user_id: Optional[str], limit: int
     ) -> List[Dict[str, Any]]:
         """Get content-based recommendations using the trained content model."""
 
         try:
             content_model = self._get_or_load_model("content")
             if not content_model:
-                logger.info("Content model not available, using vector similarity fallback")
+                logger.info(
+                    "Content model not available, using vector similarity fallback"
+                )
                 similar_products = await self.get_similar_products(product_id, limit)
                 return [
                     {
@@ -693,16 +742,15 @@ class RecommendationService:
             return []
 
     async def _get_fallback_recommendations(
-        self,
-        user_id: Optional[str],
-        limit: int,
-        context: Optional[Dict[str, Any]]
+        self, user_id: Optional[str], limit: int, context: Optional[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Fallback recommendations when ML models are not available"""
         try:
             if user_id:
                 # Try simple collaborative filtering based on order history
-                return await self._get_simple_collaborative_recommendations(user_id, limit)
+                return await self._get_simple_collaborative_recommendations(
+                    user_id, limit
+                )
             else:
                 # Get popular products for anonymous users
                 return await self.get_popular_products(limit, days=30)
@@ -711,9 +759,7 @@ class RecommendationService:
             return await self.get_popular_products(limit, days=30)
 
     async def _get_simple_collaborative_recommendations(
-        self,
-        user_id: str,
-        limit: int
+        self, user_id: str, limit: int
     ) -> List[Dict[str, Any]]:
         """Simple collaborative filtering using SQL"""
         try:
@@ -764,27 +810,31 @@ class RecommendationService:
 
             recommendations = []
             for row in results:
-                product = self.db.query(Product).filter(Product.id == row.product_id).first()
+                product = (
+                    self.db.query(Product).filter(Product.id == row.product_id).first()
+                )
                 if product:
                     score = min(1.0, row.purchase_count / 10.0)  # Normalize score
-                    recommendations.append({
-                        "product_id": str(product.id),
-                        "product": product,
-                        "score": score,
-                        "algorithm": "collaborative_filtering",
-                        "reason": f"Customers with similar tastes bought this ({row.purchase_count} purchases)",
-                    })
+                    recommendations.append(
+                        {
+                            "product_id": str(product.id),
+                            "product": product,
+                            "score": score,
+                            "algorithm": "collaborative_filtering",
+                            "reason": f"Customers with similar tastes bought this ({row.purchase_count} purchases)",
+                        }
+                    )
 
             return recommendations
 
         except Exception as e:
-            logger.error(f"Error in simple collaborative recommendations: {e}", exc_info=True)
+            logger.error(
+                f"Error in simple collaborative recommendations: {e}", exc_info=True
+            )
             return []
 
     async def _get_recently_viewed_recommendations(
-        self,
-        user_id: str,
-        limit: int
+        self, user_id: str, limit: int
     ) -> List[Dict[str, Any]]:
         """Get recommendations based on recently viewed products"""
         try:
@@ -806,18 +856,22 @@ class RecommendationService:
                     if len(recommendations) >= limit:
                         break
 
-                    recommendations.append({
-                        "product_id": str(product.id),
-                        "product": product,
-                        "score": 0.6,
-                        "algorithm": "recently_viewed",
-                        "reason": "Based on recently viewed items",
-                    })
+                    recommendations.append(
+                        {
+                            "product_id": str(product.id),
+                            "product": product,
+                            "score": 0.6,
+                            "algorithm": "recently_viewed",
+                            "reason": "Based on recently viewed items",
+                        }
+                    )
 
             return recommendations
 
         except Exception as e:
-            logger.error(f"Error getting recently viewed recommendations: {e}", exc_info=True)
+            logger.error(
+                f"Error getting recently viewed recommendations: {e}", exc_info=True
+            )
             return []
 
     def _get_user_recent_product(self, user_id: str) -> Optional[str]:
@@ -923,8 +977,7 @@ class RecommendationService:
             return value
 
     async def _enrich_recommendations_with_products(
-        self,
-        recommendations: List[Dict[str, Any]]
+        self, recommendations: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Enrich recommendations with full product data"""
         enriched_recommendations = []
@@ -943,7 +996,9 @@ class RecommendationService:
                     continue
 
                 # Otherwise, fetch the product
-                product = self.db.query(Product).filter(Product.id == product_id).first()
+                product = (
+                    self.db.query(Product).filter(Product.id == product_id).first()
+                )
                 if product and product.is_active and product.in_stock:
                     rec["product"] = product_to_json(product)
                     enriched_recommendations.append(rec)
@@ -955,8 +1010,7 @@ class RecommendationService:
         return enriched_recommendations
 
     def _deduplicate_recommendations(
-        self,
-        recommendations: List[Dict[str, Any]]
+        self, recommendations: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Remove duplicate products from recommendations"""
         seen_products = set()
@@ -978,7 +1032,9 @@ class RecommendationService:
     ):
         """Track recommendations for analytics"""
         try:
-            session_id = f"rec_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{user_id[:8]}"
+            session_id = (
+                f"rec_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{user_id[:8]}"
+            )
 
             for i, rec in enumerate(recommendations):
                 result = RecommendationResult(
@@ -989,23 +1045,24 @@ class RecommendationService:
                     score=rec["score"],
                     rank=i + 1,
                     recommendation_type=recommendation_type,
-                    context_data={"reason": rec.get("reason", ""), "explanation": rec.get("explanation", "")},
+                    context_data={
+                        "reason": rec.get("reason", ""),
+                        "explanation": rec.get("explanation", ""),
+                    },
                 )
                 self.db.add(result)
 
             self.db.commit()
-            logger.info(f"Tracked {len(recommendations)} recommendations for session {session_id}")
+            logger.info(
+                f"Tracked {len(recommendations)} recommendations for session {session_id}"
+            )
 
         except Exception as e:
             logger.error(f"Error tracking recommendations: {e}", exc_info=True)
             self.db.rollback()
 
     def track_recommendation_click(
-        self,
-        user_id: str,
-        product_id: str,
-        session_id: str,
-        rank: int
+        self, user_id: str, product_id: str, session_id: str, rank: int
     ):
         """Track when user clicks on a recommendation"""
         try:
@@ -1016,7 +1073,7 @@ class RecommendationService:
                     RecommendationResult.user_id == user_id,
                     RecommendationResult.product_id == product_id,
                     RecommendationResult.session_id == session_id,
-                    RecommendationResult.rank == rank
+                    RecommendationResult.rank == rank,
                 )
                 .first()
             )
@@ -1025,18 +1082,16 @@ class RecommendationService:
                 result.clicked = True
                 result.clicked_at = datetime.utcnow()
                 self.db.commit()
-                logger.info(f"Tracked click for recommendation: user={user_id}, product={product_id}, session={session_id}")
+                logger.info(
+                    f"Tracked click for recommendation: user={user_id}, product={product_id}, session={session_id}"
+                )
 
         except Exception as e:
             logger.error(f"Error tracking recommendation click: {e}", exc_info=True)
             self.db.rollback()
 
     def track_recommendation_conversion(
-        self,
-        user_id: str,
-        product_id: str,
-        session_id: str,
-        order_id: str
+        self, user_id: str, product_id: str, session_id: str, order_id: str
     ):
         """Track when user purchases a recommended product"""
         try:
@@ -1046,7 +1101,7 @@ class RecommendationService:
                 .filter(
                     RecommendationResult.user_id == user_id,
                     RecommendationResult.product_id == product_id,
-                    RecommendationResult.session_id == session_id
+                    RecommendationResult.session_id == session_id,
                 )
                 .all()
             )
@@ -1057,8 +1112,12 @@ class RecommendationService:
                 result.order_id = order_id
 
             self.db.commit()
-            logger.info(f"Tracked conversion for {len(results)} recommendations: user={user_id}, product={product_id}, order={order_id}")
+            logger.info(
+                f"Tracked conversion for {len(results)} recommendations: user={user_id}, product={product_id}, order={order_id}"
+            )
 
         except Exception as e:
-            logger.error(f"Error tracking recommendation conversion: {e}", exc_info=True)
+            logger.error(
+                f"Error tracking recommendation conversion: {e}", exc_info=True
+            )
             self.db.rollback()

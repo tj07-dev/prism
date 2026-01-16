@@ -5,13 +5,14 @@ This service provides text generation capabilities using Claude via AWS Bedrock.
 Used for generating recommendation explanations, product descriptions, and other
 natural language content.
 """
+
 import json
 import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import boto3
-from botocore.exceptions import ClientError, BotoCoreError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.config import get_settings
 
@@ -191,7 +192,9 @@ class LLMService:
 
         # Use defaults from settings if not provided
         max_tokens = max_tokens or settings.LLM_MAX_TOKENS
-        temperature = temperature if temperature is not None else settings.LLM_TEMPERATURE
+        temperature = (
+            temperature if temperature is not None else settings.LLM_TEMPERATURE
+        )
         top_p = top_p if top_p is not None else settings.LLM_TOP_P
 
         try:
@@ -513,8 +516,6 @@ class LLMService:
         results = {}
 
         try:
-            import asyncio
-
             # Generate all explanations concurrently
             tasks = []
             for data in explanations_data:
@@ -535,7 +536,9 @@ class LLMService:
                     results[index] = None
 
         except Exception as e:
-            logger.error(f"Error in batch explanation generation: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error in batch explanation generation: {str(e)}", exc_info=True
+            )
 
         return results
 
@@ -566,8 +569,7 @@ class LLMService:
         }
 
         return fallback_templates.get(
-            recommendation_type.lower(),
-            fallback_templates["default"]
+            recommendation_type.lower(), fallback_templates["default"]
         )
 
 

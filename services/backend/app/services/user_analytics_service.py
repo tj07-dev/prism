@@ -2,6 +2,7 @@
 User Analytics Service - Compatibility Wrapper.
 Provides unified interface to modular analytics services.
 """
+
 from sqlalchemy.orm import Session
 
 from app.services.analytics import (
@@ -23,7 +24,9 @@ class UserAnalyticsService:
         self.churn_predictor = ChurnPredictor(db)
 
     # Event tracking
-    def track_user_event(self, user_id, session_id, event_type, event_data, request_info=None):
+    def track_user_event(
+        self, user_id, session_id, event_type, event_data, request_info=None
+    ):
         return self.event_tracker.track_user_event(
             user_id, session_id, event_type, event_data, request_info
         )
@@ -51,10 +54,12 @@ class UserAnalyticsService:
         Returns:
             Dictionary with funnel analysis including conversion rates between steps
         """
-        from datetime import datetime, timedelta
-        from sqlalchemy import func, distinct
-        from app.models import UserBehaviorEvent
         import logging
+        from datetime import datetime, timedelta
+
+        from sqlalchemy import distinct, func
+
+        from app.models import UserBehaviorEvent
 
         logger = logging.getLogger(__name__)
 
@@ -70,9 +75,10 @@ class UserAnalyticsService:
                     self.db.query(func.count(distinct(UserBehaviorEvent.user_id)))
                     .filter(
                         UserBehaviorEvent.event_type == step,
-                        UserBehaviorEvent.created_at >= cutoff_date
+                        UserBehaviorEvent.created_at >= cutoff_date,
                     )
-                    .scalar() or 0
+                    .scalar()
+                    or 0
                 )
 
                 # Calculate conversion rate from previous step
@@ -85,13 +91,15 @@ class UserAnalyticsService:
                     conversion_rate = round((user_count / previous_user_count) * 100, 2)
                     drop_off_rate = round(100.0 - conversion_rate, 2)
 
-                funnel_data.append({
-                    "step": i + 1,
-                    "step_name": step,
-                    "user_count": user_count,
-                    "conversion_rate": conversion_rate,
-                    "drop_off_rate": drop_off_rate,
-                })
+                funnel_data.append(
+                    {
+                        "step": i + 1,
+                        "step_name": step,
+                        "user_count": user_count,
+                        "conversion_rate": conversion_rate,
+                        "drop_off_rate": drop_off_rate,
+                    }
+                )
 
                 previous_user_count = user_count
 
@@ -99,8 +107,9 @@ class UserAnalyticsService:
             overall_conversion = 0.0
             if funnel_data and funnel_data[0]["user_count"] > 0:
                 overall_conversion = round(
-                    (funnel_data[-1]["user_count"] / funnel_data[0]["user_count"]) * 100,
-                    2
+                    (funnel_data[-1]["user_count"] / funnel_data[0]["user_count"])
+                    * 100,
+                    2,
                 )
 
             return {
@@ -112,7 +121,7 @@ class UserAnalyticsService:
                 "date_range": {
                     "start": cutoff_date.isoformat(),
                     "end": datetime.utcnow().isoformat(),
-                }
+                },
             }
 
         except Exception as e:
@@ -129,11 +138,13 @@ class UserAnalyticsService:
         Returns:
             Dictionary with segment insights including growth, activity, and performance metrics
         """
-        from datetime import datetime, timedelta
-        from sqlalchemy import func
-        from app.models import UserSegment, UserSegmentMembership, Order
-        from decimal import Decimal
         import logging
+        from datetime import datetime, timedelta
+        from decimal import Decimal
+
+        from sqlalchemy import func
+
+        from app.models import Order, UserSegment, UserSegmentMembership
 
         logger = logging.getLogger(__name__)
 
@@ -141,7 +152,9 @@ class UserAnalyticsService:
             cutoff_date = datetime.utcnow() - timedelta(days=days)
 
             # Get all active segments
-            segments = self.db.query(UserSegment).filter(UserSegment.is_active == True).all()
+            segments = (
+                self.db.query(UserSegment).filter(UserSegment.is_active == True).all()
+            )
 
             insights = []
 
@@ -151,9 +164,10 @@ class UserAnalyticsService:
                     self.db.query(func.count(UserSegmentMembership.id))
                     .filter(
                         UserSegmentMembership.segment_id == segment.id,
-                        UserSegmentMembership.is_active == True
+                        UserSegmentMembership.is_active == True,
                     )
-                    .scalar() or 0
+                    .scalar()
+                    or 0
                 )
 
                 # Get new members in period
@@ -162,9 +176,10 @@ class UserAnalyticsService:
                     .filter(
                         UserSegmentMembership.segment_id == segment.id,
                         UserSegmentMembership.is_active == True,
-                        UserSegmentMembership.assigned_at >= cutoff_date
+                        UserSegmentMembership.assigned_at >= cutoff_date,
                     )
-                    .scalar() or 0
+                    .scalar()
+                    or 0
                 )
 
                 # Calculate growth rate
@@ -172,14 +187,18 @@ class UserAnalyticsService:
                 if current_members > 0:
                     previous_members = current_members - new_members
                     if previous_members > 0:
-                        growth_rate = round(((current_members - previous_members) / previous_members) * 100, 2)
+                        growth_rate = round(
+                            ((current_members - previous_members) / previous_members)
+                            * 100,
+                            2,
+                        )
 
                 # Get segment user IDs for activity calculations
                 segment_user_ids = (
                     self.db.query(UserSegmentMembership.user_id)
                     .filter(
                         UserSegmentMembership.segment_id == segment.id,
-                        UserSegmentMembership.is_active == True
+                        UserSegmentMembership.is_active == True,
                     )
                     .all()
                 )
@@ -195,9 +214,10 @@ class UserAnalyticsService:
                         .filter(
                             Order.user_id.in_(segment_user_ids),
                             Order.created_at >= cutoff_date,
-                            Order.status.notin_(["cancelled", "refunded"])
+                            Order.status.notin_(["cancelled", "refunded"]),
                         )
-                        .scalar() or 0
+                        .scalar()
+                        or 0
                     )
 
                     revenue_sum = (
@@ -205,7 +225,7 @@ class UserAnalyticsService:
                         .filter(
                             Order.user_id.in_(segment_user_ids),
                             Order.created_at >= cutoff_date,
-                            Order.status.notin_(["cancelled", "refunded"])
+                            Order.status.notin_(["cancelled", "refunded"]),
                         )
                         .scalar()
                     )
@@ -221,18 +241,22 @@ class UserAnalyticsService:
                 if current_members > 0:
                     activity_rate = round((active_users / current_members) * 100, 2)
 
-                insights.append({
-                    "segment_id": str(segment.id),
-                    "segment_name": segment.name,
-                    "segment_type": segment.segment_type,
-                    "total_members": current_members,
-                    "new_members": new_members,
-                    "growth_rate": growth_rate,
-                    "active_users": active_users,
-                    "activity_rate": activity_rate,
-                    "total_revenue": round(total_revenue, 2),
-                    "revenue_per_member": round(total_revenue / current_members, 2) if current_members > 0 else 0.0,
-                })
+                insights.append(
+                    {
+                        "segment_id": str(segment.id),
+                        "segment_name": segment.name,
+                        "segment_type": segment.segment_type,
+                        "total_members": current_members,
+                        "new_members": new_members,
+                        "growth_rate": growth_rate,
+                        "active_users": active_users,
+                        "activity_rate": activity_rate,
+                        "total_revenue": round(total_revenue, 2),
+                        "revenue_per_member": round(total_revenue / current_members, 2)
+                        if current_members > 0
+                        else 0.0,
+                    }
+                )
 
             # Calculate total stats
             total_users = sum(s["total_members"] for s in insights)
@@ -249,7 +273,7 @@ class UserAnalyticsService:
                 "date_range": {
                     "start": cutoff_date.isoformat(),
                     "end": datetime.utcnow().isoformat(),
-                }
+                },
             }
 
         except Exception as e:
@@ -263,13 +287,19 @@ class UserAnalyticsService:
         Returns:
             Dictionary with current system metrics including active users, recent events, and performance stats
         """
-        from datetime import datetime, timedelta
-        from sqlalchemy import func, distinct
-        from app.models import (
-            UserBehaviorEvent, Order, User, Product,
-            RecommendationResult, SearchAnalytics
-        )
         import logging
+        from datetime import datetime, timedelta
+
+        from sqlalchemy import distinct, func
+
+        from app.models import (
+            Order,
+            Product,
+            RecommendationResult,
+            SearchAnalytics,
+            User,
+            UserBehaviorEvent,
+        )
 
         logger = logging.getLogger(__name__)
 
@@ -282,13 +312,15 @@ class UserAnalyticsService:
             active_users_1h = (
                 self.db.query(func.count(distinct(UserBehaviorEvent.user_id)))
                 .filter(UserBehaviorEvent.created_at >= last_hour)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             active_users_24h = (
                 self.db.query(func.count(distinct(UserBehaviorEvent.user_id)))
                 .filter(UserBehaviorEvent.created_at >= last_24h)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             # Recent orders
@@ -296,18 +328,20 @@ class UserAnalyticsService:
                 self.db.query(func.count(Order.id))
                 .filter(
                     Order.created_at >= last_hour,
-                    Order.status.notin_(["cancelled", "refunded"])
+                    Order.status.notin_(["cancelled", "refunded"]),
                 )
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             orders_24h = (
                 self.db.query(func.count(Order.id))
                 .filter(
                     Order.created_at >= last_24h,
-                    Order.status.notin_(["cancelled", "refunded"])
+                    Order.status.notin_(["cancelled", "refunded"]),
                 )
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             # Revenue
@@ -315,7 +349,7 @@ class UserAnalyticsService:
                 self.db.query(func.sum(Order.total_amount))
                 .filter(
                     Order.created_at >= last_hour,
-                    Order.status.notin_(["cancelled", "refunded"])
+                    Order.status.notin_(["cancelled", "refunded"]),
                 )
                 .scalar()
             )
@@ -325,7 +359,7 @@ class UserAnalyticsService:
                 self.db.query(func.sum(Order.total_amount))
                 .filter(
                     Order.created_at >= last_24h,
-                    Order.status.notin_(["cancelled", "refunded"])
+                    Order.status.notin_(["cancelled", "refunded"]),
                 )
                 .scalar()
             )
@@ -335,44 +369,55 @@ class UserAnalyticsService:
             events_1h = (
                 self.db.query(func.count(UserBehaviorEvent.id))
                 .filter(UserBehaviorEvent.created_at >= last_hour)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             events_24h = (
                 self.db.query(func.count(UserBehaviorEvent.id))
                 .filter(UserBehaviorEvent.created_at >= last_24h)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             # Search queries
             searches_1h = (
                 self.db.query(func.count(SearchAnalytics.id))
                 .filter(SearchAnalytics.created_at >= last_hour)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             searches_24h = (
                 self.db.query(func.count(SearchAnalytics.id))
                 .filter(SearchAnalytics.created_at >= last_24h)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             # Recommendations served
             recommendations_1h = (
                 self.db.query(func.count(RecommendationResult.id))
                 .filter(RecommendationResult.created_at >= last_hour)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             recommendations_24h = (
                 self.db.query(func.count(RecommendationResult.id))
                 .filter(RecommendationResult.created_at >= last_24h)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             # System stats
             total_users = self.db.query(func.count(User.id)).scalar() or 0
-            total_products = self.db.query(func.count(Product.id)).filter(Product.is_active == True).scalar() or 0
+            total_products = (
+                self.db.query(func.count(Product.id))
+                .filter(Product.is_active == True)
+                .scalar()
+                or 0
+            )
             total_orders = self.db.query(func.count(Order.id)).scalar() or 0
 
             return {
@@ -405,7 +450,7 @@ class UserAnalyticsService:
                     "total_users": total_users,
                     "total_products": total_products,
                     "total_orders": total_orders,
-                }
+                },
             }
 
         except Exception as e:

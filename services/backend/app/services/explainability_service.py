@@ -8,6 +8,7 @@ and cost-effective than generating explanations via LLM for every recommendation
 The service analyzes user history, product details, and recommendation context
 to select and populate appropriate explanation templates.
 """
+
 import logging
 import random
 from datetime import datetime, timedelta
@@ -149,9 +150,7 @@ class ExplainabilityService:
             ],
         }
 
-    def get_user_purchase_history(
-        self, user_id: int, days: int = 90
-    ) -> List[Dict]:
+    def get_user_purchase_history(self, user_id: int, days: int = 90) -> List[Dict]:
         """
         Get user's recent purchase history with product and category details.
 
@@ -212,9 +211,7 @@ class ExplainabilityService:
             logger.error(f"Error getting user purchase history: {e}", exc_info=True)
             return []
 
-    def get_user_viewing_history(
-        self, user_id: int, days: int = 30
-    ) -> List[Dict]:
+    def get_user_viewing_history(self, user_id: int, days: int = 30) -> List[Dict]:
         """
         Get user's recent product viewing history.
 
@@ -266,7 +263,9 @@ class ExplainabilityService:
                 for row in results
             ]
 
-            logger.debug(f"Found {len(viewed_products)} viewed products for user {user_id}")
+            logger.debug(
+                f"Found {len(viewed_products)} viewed products for user {user_id}"
+            )
             return viewed_products
 
         except Exception as e:
@@ -392,9 +391,7 @@ class ExplainabilityService:
             logger.error(f"Error getting product details: {e}", exc_info=True)
             return None
 
-    def get_reorder_information(
-        self, user_id: int, product_id: int
-    ) -> Optional[Dict]:
+    def get_reorder_information(self, user_id: int, product_id: int) -> Optional[Dict]:
         """
         Get information about user's purchase cycle for a product.
 
@@ -607,7 +604,9 @@ class ExplainabilityService:
             try:
                 # Extract product ID (support different dict structures)
                 product_id = rec.get("product_id") or (
-                    rec.get("product", {}).get("id") if isinstance(rec.get("product"), dict) else None
+                    rec.get("product", {}).get("id")
+                    if isinstance(rec.get("product"), dict)
+                    else None
                 )
 
                 if not product_id:
@@ -634,9 +633,7 @@ class ExplainabilityService:
                 enhanced_recommendations.append(rec)
 
             except Exception as e:
-                logger.error(
-                    f"Error enhancing recommendation: {e}", exc_info=True
-                )
+                logger.error(f"Error enhancing recommendation: {e}", exc_info=True)
                 # Still include the recommendation without explanation
                 rec["explanation"] = "Recommended for you"
                 enhanced_recommendations.append(rec)

@@ -1,4 +1,3 @@
-
 from typing import Any, Dict, List, Optional
 
 from app.models.product import Product, ProductCategory, ProductConfig
@@ -63,7 +62,9 @@ def product_to_json(
         "code": product.code,
         "brand": product.brand,
         "price": float(product.price) if product.price is not None else None,
-        "compare_price": float(product.compare_price) if product.compare_price is not None else None,
+        "compare_price": float(product.compare_price)
+        if product.compare_price is not None
+        else None,
         "description": product.description,
         "specification": product.specification,
         "technical_details": product.technical_details,
@@ -85,7 +86,9 @@ def product_to_json(
     }
 
     optional_cost_fields = {
-        "cost_price": float(product.cost_price) if product.cost_price is not None else None,
+        "cost_price": float(product.cost_price)
+        if product.cost_price is not None
+        else None,
     }
 
     for field, value in optional_cost_fields.items():

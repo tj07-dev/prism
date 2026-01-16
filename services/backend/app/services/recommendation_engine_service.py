@@ -2,6 +2,7 @@
 Recommendation Engine Service - Compatibility Wrapper.
 Provides unified interface to modular recommendation services.
 """
+
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -18,7 +19,9 @@ class RecommendationEngineService:
         self.db = db
         self.config_manager = ModelConfigManager(db)
         self.performance_tracker = PerformanceTracker(db)
-        self.training_service = MLTrainingService(db, models_dir=settings.MODEL_STORAGE_PATH)
+        self.training_service = MLTrainingService(
+            db, models_dir=settings.MODEL_STORAGE_PATH
+        )
 
     # Model config management
     def get_model_configs(self, active_only=False):
@@ -71,6 +74,7 @@ class RecommendationEngineService:
             Dictionary with success status and training_id
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         try:
@@ -96,17 +100,20 @@ class RecommendationEngineService:
 
             # Generate model name with timestamp
             from datetime import datetime
-            model_name = f"{model_type}_training_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+
+            model_name = (
+                f"{model_type}_training_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            )
 
             # Start async training
             result = self.training_service.start_training_async(
-                model_type=model_type,
-                model_name=model_name,
-                parameters=parameters
+                model_type=model_type, model_name=model_name, parameters=parameters
             )
 
             if result.get("success"):
-                logger.info(f"Training triggered for {model_type}, training_id: {result['training_id']}")
+                logger.info(
+                    f"Training triggered for {model_type}, training_id: {result['training_id']}"
+                )
                 return {
                     "success": True,
                     "training_id": result["training_id"],
@@ -116,7 +123,9 @@ class RecommendationEngineService:
                     "message": f"Training started for {model_type}",
                 }
             else:
-                logger.error(f"Failed to trigger training for {model_type}: {result.get('error')}")
+                logger.error(
+                    f"Failed to trigger training for {model_type}: {result.get('error')}"
+                )
                 return {
                     "success": False,
                     "error": result.get("error", "Unknown error"),
@@ -141,7 +150,9 @@ class RecommendationEngineService:
             Dictionary with training history records
         """
         import logging
+
         from sqlalchemy import desc
+
         from app.models import MLModelConfig, ModelTrainingHistory
 
         logger = logging.getLogger(__name__)
@@ -159,9 +170,7 @@ class RecommendationEngineService:
 
             # Order by most recent first and limit
             training_records = (
-                query.order_by(desc(ModelTrainingHistory.started_at))
-                .limit(limit)
-                .all()
+                query.order_by(desc(ModelTrainingHistory.started_at)).limit(limit).all()
             )
 
             # Serialize results
@@ -169,7 +178,9 @@ class RecommendationEngineService:
             for record in training_records:
                 history_item = {
                     "id": str(record.id),
-                    "model_config_id": str(record.model_config_id) if record.model_config_id else None,
+                    "model_config_id": str(record.model_config_id)
+                    if record.model_config_id
+                    else None,
                     "training_status": record.training_status,
                     "training_metrics": record.training_metrics or {},
                     "training_parameters": record.training_parameters or {},
@@ -177,9 +188,15 @@ class RecommendationEngineService:
                     "training_data_stats": record.training_data_stats or {},
                     "model_performance": record.model_performance or {},
                     "training_duration_seconds": record.training_duration_seconds,
-                    "started_at": record.started_at.isoformat() if record.started_at else None,
-                    "completed_at": record.completed_at.isoformat() if record.completed_at else None,
-                    "initiated_by": str(record.initiated_by) if record.initiated_by else None,
+                    "started_at": record.started_at.isoformat()
+                    if record.started_at
+                    else None,
+                    "completed_at": record.completed_at.isoformat()
+                    if record.completed_at
+                    else None,
+                    "initiated_by": str(record.initiated_by)
+                    if record.initiated_by
+                    else None,
                 }
 
                 # Add model config details if available
